@@ -3,12 +3,19 @@ import "./App.css";
 import TodoList from "./components/TodoList.jsx";
 import TodoInput from "./components/TodoInput.jsx";
 
+//  Firebase追加
+import { auth, provider } from "./firebase";
+import { signInWithPopup, signOut } from "firebase/auth";
+
 function App() {
   const [todo, setTodo] = useState("");
   const [list, setList] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
   const [filter, setFilter] = useState("all");
   const [dark, setDark] = useState(false);
+
+  //  ユーザー状態
+  const [user, setUser] = useState(null);
 
   // 初回読み込み
   useEffect(() => {
@@ -28,6 +35,18 @@ function App() {
   useEffect(() => {
     localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
+
+  //  ログイン
+  const login = async () => {
+    const result = await signInWithPopup(auth, provider);
+    setUser(result.user);
+  };
+
+  //  ログアウト
+  const logout = () => {
+    signOut(auth);
+    setUser(null);
+  };
 
   const addTodo = () => {
     if (!todo) return;
@@ -59,14 +78,12 @@ function App() {
     setEditIndex(index);
   };
 
-  // フィルター
   const filteredList = list.filter((item) => {
     if (filter === "done") return item.completed;
     if (filter === "todo") return !item.completed;
     return true;
   });
 
-  // ドラッグ
   const onDragStart = (e, index) => {
     e.dataTransfer.setData("index", index);
   };
@@ -82,6 +99,16 @@ function App() {
   return (
     <div className={dark ? "container dark" : "container"}>
       <h1>🔥 Todoアプリ</h1>
+
+      {/* 🔐 ログインUI */}
+      {user ? (
+        <>
+          <p>{user.displayName}</p>
+          <button onClick={logout}>ログアウト</button>
+        </>
+      ) : (
+        <button onClick={login}>Googleログイン</button>
+      )}
 
       <button onClick={() => setDark(!dark)}>
         {dark ? "ライトモード" : "ダークモード"}
