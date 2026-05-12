@@ -4,7 +4,7 @@ import TodoList from "./components/TodoList.jsx";
 import TodoInput from "./components/TodoInput.jsx";
 
 //  Firebase追加
-import { auth, provider } from "./firebase";
+import { auth, provider } from "./firebase.js";
 import { signInWithPopup, signOut } from "firebase/auth";
 
 function App() {
