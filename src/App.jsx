@@ -3,9 +3,15 @@ import "./App.css";
 import TodoList from "./components/TodoList.jsx";
 import TodoInput from "./components/TodoInput.jsx";
 
-//  Firebase追加
-import { auth, provider } from "./firebase.js";
+// Firebase
+import { auth, provider, database } from "./firebase.js";
 import { signInWithPopup, signOut } from "firebase/auth";
+
+import {
+  ref,
+  push,
+  onValue
+} from "firebase/database";
 
 function App() {
   const [todo, setTodo] = useState("");
@@ -14,85 +20,104 @@ function App() {
   const [filter, setFilter] = useState("all");
   const [dark, setDark] = useState(false);
 
-  //  ユーザー状態
+  // ユーザー状態
   const [user, setUser] = useState(null);
 
-  // 初回読み込み
+  // Realtime Databaseから取得
   useEffect(() => {
-    const saved = localStorage.getItem("todos");
-    const theme = localStorage.getItem("theme");
+    const todoRef = ref(database, "todos");
 
-    if (saved) setList(JSON.parse(saved));
-    if (theme === "dark") setDark(true);
+    onValue(todoRef, (snapshot) => {
+      const data = snapshot.val();
+
+      if (data) {
+        const loadedTodos = Object.values(data);
+        setList(loadedTodos);
+      } else {
+        setList([]);
+      }
+    });
   }, []);
 
-  // Todo保存
+  // テーマ読み込み
   useEffect(() => {
-    localStorage.setItem("todos", JSON.stringify(list));
-  }, [list]);
+    const theme = localStorage.getItem("theme");
+
+    if (theme === "dark") {
+      setDark(true);
+    }
+  }, []);
 
   // テーマ保存
   useEffect(() => {
     localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
 
-  //  ログイン
+  // ログイン
   const login = async () => {
     const result = await signInWithPopup(auth, provider);
     setUser(result.user);
   };
 
-  //  ログアウト
+  // ログアウト
   const logout = () => {
     signOut(auth);
     setUser(null);
   };
 
+  // Todo追加
   const addTodo = () => {
     if (!todo) return;
 
-    if (editIndex !== null) {
-      const newList = [...list];
-      newList[editIndex].text = todo;
-      setList(newList);
-      setEditIndex(null);
-    } else {
-      setList([...list, { text: todo, completed: false }]);
-    }
+    const newTodo = {
+      text: todo,
+      completed: false,
+    };
+
+    push(ref(database, "todos"), newTodo);
 
     setTodo("");
   };
 
+  // Todo削除
   const deleteTodo = (index) => {
     setList(list.filter((_, i) => i !== index));
   };
 
+  // 完了切り替え
   const toggleComplete = (index) => {
     const newList = [...list];
     newList[index].completed = !newList[index].completed;
     setList(newList);
   };
 
+  // 編集開始
   const startEdit = (index) => {
     setTodo(list[index].text);
     setEditIndex(index);
   };
 
+  // フィルター
   const filteredList = list.filter((item) => {
     if (filter === "done") return item.completed;
     if (filter === "todo") return !item.completed;
     return true;
   });
 
+  // ドラッグ開始
   const onDragStart = (e, index) => {
     e.dataTransfer.setData("index", index);
   };
 
+  // ドロップ
   const onDrop = (e, index) => {
     const draggedIndex = e.dataTransfer.getData("index");
+
     const newList = [...list];
     const draggedItem = newList.splice(draggedIndex, 1)[0];
+
     newList.splice(index, 0, draggedItem);
+
     setList(newList);
   };
 
@@ -110,10 +135,12 @@ function App() {
         <button onClick={login}>Googleログイン</button>
       )}
 
+      {/* ダークモード */}
       <button onClick={() => setDark(!dark)}>
         {dark ? "ライトモード" : "ダークモード"}
       </button>
 
+      {/* 入力 */}
       <TodoInput
         todo={todo}
         setTodo={setTodo}
@@ -121,12 +148,14 @@ function App() {
         editIndex={editIndex}
       />
 
+      {/* フィルター */}
       <div className="filter">
         <button onClick={() => setFilter("all")}>全部</button>
         <button onClick={() => setFilter("todo")}>未完了</button>
         <button onClick={() => setFilter("done")}>完了</button>
       </div>
 
+      {/* Todo一覧 */}
       <TodoList
         list={filteredList}
         toggleComplete={toggleComplete}
