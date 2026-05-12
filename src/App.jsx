@@ -98,9 +98,9 @@ function App() {
 
   return (
     <div className={dark ? "container dark" : "container"}>
-      <h1>🔥 Todoアプリ</h1>
+      <h1> Todoアプリ</h1>
 
-      {/* 🔐 ログインUI */}
+      {/* ログインUI */}
       {user ? (
         <>
           <p>{user.displayName}</p>
